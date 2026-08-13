@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# SailfishOS / mb2 build artefacts
+RPMS/
+SRPMS/
+installroot/
+.mb2/
+*.rpm
+*.tar.bz2
+
+# Local runtime / exports
+*.png
+*.jpg
+!icons/**/*.png
+!media/*.png
+!media/*.jpg
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store

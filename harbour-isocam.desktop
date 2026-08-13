@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=iSoCam
+Icon=harbour-isocam
+Exec=sailfish-qml harbour-isocam
+X-Nemo-Application-Type=silica-qt5
