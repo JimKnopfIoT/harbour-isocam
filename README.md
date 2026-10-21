@@ -117,6 +117,8 @@ want the geotagging.
 - All audio processing is on-device; the raw 64-channel microphone data is not
   exposed by the camera.
 
+AI assisted development
+
 ## License
 
 [MIT](LICENSE). The SailfishOS map-fetch helper (`backend.osm_ways`) is adapted from
