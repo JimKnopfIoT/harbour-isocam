@@ -17,6 +17,9 @@ installroot/
 !media/*.png
 !media/*.jpg
 
+# Local helpers / private material (never published)
+media.local/
+
 # Editor / OS
 .idea/
 .vscode/
