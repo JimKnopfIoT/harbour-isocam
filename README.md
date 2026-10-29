@@ -64,7 +64,7 @@ several files:
 | `<ts>_0.jpg` | the acoustic overlay — 800 × 480, ~99 % transparent, only the sound blob is painted |
 | `<ts>.doa` | a text header plus binary data: a 32 × 24 direction-of-arrival grid and a 3201-bin power spectrum |
 | `info.json` | the metadata — the selected frequency band, the detected peaks as `{x, y, dB}`, max dB SPL, scenario, distance |
-| `<ts>.wav` | the recording itself, mono 16-bit at roughly 130 kHz sample rate (ultrasound needs the headroom) |
+| `<ts>.wav` | ~1 s of the recording itself, mono at 130 kHz sample rate (ultrasound needs the headroom) — 32-bit float since camera firmware 0.0.41, 16-bit before |
 | `.thumbnail.jpg`, `dateTime`, `scenarioMode` | small extras the on-device gallery uses |
 
 Nothing on the camera ever draws these together into a single image — that view
@@ -90,6 +90,22 @@ applied on read.
 
 See [`docs/API.md`](docs/API.md) and the in-code comments for the HTTP endpoints and
 the full `.doa` layout.
+
+### Listening to the ultrasound
+
+The detail view can also play the measurement's `<ts>.wav` and show it as a
+spectrogram (time × frequency, with the selected band and the peak marked). Two
+playback modes, tap the label to switch:
+
+- **Zeitlupe 1:10** — time expansion: the same samples played ten times slower, so
+  ~1 s becomes ~10 s and every frequency drops by a factor of ten (30 kHz → 3 kHz).
+  Nothing is filtered away; you hear the whole spectrum.
+- **Mischer** — a heterodyne like an ultrasonic leak detector: the peak is mixed down
+  to about 2 kHz and played in real time.
+
+This needs camera firmware **0.0.41 or newer**. Older firmware stored the WAV as
+16-bit PCM at such a low level that it holds little more than quantisation noise;
+such recordings still play, but there is not much to hear.
 
 ## Install on Sailfish OS
 

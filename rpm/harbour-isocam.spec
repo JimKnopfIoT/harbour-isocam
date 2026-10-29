@@ -2,7 +2,7 @@
 
 Name:       harbour-isocam
 Summary:    Viewer for the CRY8024 acoustic camera
-Version:    0.1.0
+Version:    0.2.0
 Release:    1
 License:    MIT
 URL:        https://github.com/JimKnopfIoT/harbour-isocam
@@ -13,6 +13,7 @@ Packager:   harbour-isocam contributors
 
 Requires:   sailfishsilica-qt5 >= 0.10.9
 Requires:   pyotherside-qml-plugin-python3-qt5
+Requires:   qt5-qtdeclarative-import-multimedia
 
 %description
 Viewer for the Crysound SonoCam Pocket CRY8024 acoustic camera. Browse
@@ -43,5 +44,9 @@ done
 %{_datadir}/icons/hicolor/*/apps/%{name}.png
 
 %changelog
+* Thu Oct 29 2026 harbour-isocam contributors 0.2.0-1
+- Listen to a measurement's ultrasonic WAV: time expansion 1:10 or heterodyne mixer.
+- Spectrogram view of the WAV with band and peak marked.
+- Supports camera firmware 0.0.41 (32-bit float WAV, .doa VERSION 0023).
 * Wed Jun 24 2026 harbour-isocam contributors 0.1.0-1
 - Initial MVP: measurements viewer, camera sync, calibrated peak + spectrum bars.

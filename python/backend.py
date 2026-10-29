@@ -9,7 +9,7 @@ import json
 import os
 import time
 
-from isocam_core import formats, webclient
+from isocam_core import audio, formats, webclient
 from isocam_core.render_pil import analysis_image
 from isocam_core.live_pil import live_frame
 
@@ -69,7 +69,60 @@ def render(folder):
         "lat": lat,
         "lon": lon,
         "hasGeo": bool(lat or lon),
+        "hasWav": audio.find_wav(folder) is not None,
     }
+
+
+def _cache_path(folder, suffix):
+    cache = os.path.join(DATA_ROOT, ".cache")
+    os.makedirs(cache, exist_ok=True)
+    return os.path.join(cache, os.path.basename(folder.rstrip("/")) + suffix)
+
+
+def _fresh(path, src):
+    return os.path.exists(path) and os.path.getmtime(path) >= os.path.getmtime(src)
+
+
+def play_audio(folder, mode="slow"):
+    """Audible version of the measurement's ultrasonic WAV; returns {path} or {error}.
+
+    mode "slow" = time expansion 1:10, "mixer" = peak heterodyned to ~2 kHz."""
+    src = audio.find_wav(folder)
+    if not src:
+        return {"error": "keine WAV"}
+    mode = "mixer" if mode == "mixer" else "slow"
+    path = _cache_path(folder, "_%s.wav" % mode)
+    try:
+        if not _fresh(path, src):
+            w = audio.read_wav(src)
+            if mode == "mixer":
+                m = formats.load_measurement(folder)
+                s, rate = audio.mixer(w, m.dominant_khz * 1000.0)
+            else:
+                s, rate = audio.slow(w)
+            audio.write_wav16(path, s, rate)
+    except (OSError, ValueError) as e:
+        return {"error": str(e)}
+    return {"path": path}
+
+
+def spectrogram(folder):
+    """Spectrogram PNG of the measurement's WAV; returns {png} or {error}."""
+    src = audio.find_wav(folder)
+    if not src:
+        return {"error": "keine WAV"}
+    path = _cache_path(folder, "_spec.png")
+    try:
+        if not _fresh(path, src):
+            m = formats.load_measurement(folder)
+            img = audio.spectrogram_image(audio.read_wav(src), m.name,
+                                          (m.freq_low_khz, m.freq_high_khz),
+                                          m.dominant_khz)
+            img.save(path + ".part", "PNG")
+            os.replace(path + ".part", path)
+    except (OSError, ValueError) as e:
+        return {"error": str(e)}
+    return {"png": path}
 
 
 def sync(host, lat=None, lon=None, alt=None):
@@ -157,6 +210,10 @@ def delete(folder):
     import shutil
     try:
         shutil.rmtree(folder)
+        for suffix in ("_slow.wav", "_mixer.wav", "_spec.png"):
+            p = _cache_path(folder, suffix)
+            if os.path.exists(p):
+                os.remove(p)
         return True
     except OSError:
         return False

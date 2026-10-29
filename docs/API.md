@@ -39,7 +39,18 @@ task/* …
 File-browser web roots serve HTML listings: `/download /pictures /recordings
 /dcim /update`. The `/download/..` root resolves to the device's shared storage
 root, e.g. `GET /download/../imager/Default/<ts>/info.json`. Implemented in
-`sonocam/webclient.py`.
+`python/isocam_core/webclient.py`.
+
+## Firmware
+Verified against camera firmware (app `com.cry.acoustic_pocket`) **0.0.29** and
+**0.0.41**. Server, auth, web roots and `/download/..` are unchanged between the two.
+What 0.0.41 changed:
+- `/v1/deviceRunningParams`: `doaType`/`doaTypeStr` are reported from the running
+  DOA engine (4/54) instead of the fixed 2/53.
+- `.doa` header `VERSION:0023` (was `0020`); the block structure is the same.
+- `info.json` gains `gasLeakageBaseCoefficient`.
+- `<ts>.wav` is 32-bit IEEE float (format 3), 130 kHz, exactly 100 frames
+  (128000 samples, ~0.98 s); before it was 16-bit PCM with almost no signal.
 
 ## Notes
 - All processing is on-device; the raw 64-channel microphone data is not exposed —

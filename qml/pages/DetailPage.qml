@@ -1,6 +1,7 @@
 import QtQuick 2.6
 import Sailfish.Silica 1.0
 import QtPositioning 5.3
+import QtMultimedia 5.6
 import Nemo.Configuration 1.0
 
 Page {
@@ -12,7 +13,7 @@ Page {
     property int index: 0
     property string folder: (index >= 0 && index < folders.length) ? folders[index] : ""
     property var info: ({ name: "…", peak: 0, db: 0, band: [0, 0], auto: false,
-                          lat: 0, lon: 0, hasGeo: false })
+                          lat: 0, lon: 0, hasGeo: false, hasWav: false })
 
     // landscape: data column left + image full height right
     // portrait:  data full width on top + image full width below
@@ -36,6 +37,48 @@ Page {
     ConfigurationValue {
         id: cfgCoordFmt; key: "/apps/harbour-isocam/coordFormat"; defaultValue: 0
     }
+
+    // the measurement's ultrasonic WAV: listen (0 = slow motion 1:10, 1 = mixer,
+    // persisted) and a spectrogram that swaps with the analysis image
+    ConfigurationValue {
+        id: cfgAudioMode; key: "/apps/harbour-isocam/audioMode"; defaultValue: 0
+    }
+    property string analysisPng: ""
+    property string specPng: ""
+    property bool specShown: false
+    property bool audioBusy: false
+    property string audioMsg: ""
+    property bool playing: player.playbackState === Audio.PlayingState
+
+    Audio { id: player }
+
+    function stopAudio() { player.stop() }
+    function togglePlay() {
+        if (page.playing) { player.stop(); return }
+        page.audioBusy = true
+        page.audioMsg = ""
+        pyRef.call('backend.play_audio', [folder, cfgAudioMode.value === 1 ? "mixer" : "slow"],
+                   function(res) {
+            page.audioBusy = false
+            if (!res.path) { page.audioMsg = res.error; return }
+            player.source = ""   // same cached file may be replayed
+            player.source = "file://" + res.path
+            player.play()
+        })
+    }
+    function toggleSpec() {
+        if (page.specShown) { page.specShown = false; img.source = page.analysisPng; return }
+        if (page.specPng) { page.specShown = true; img.source = page.specPng; return }
+        busy.running = true
+        pyRef.call('backend.spectrogram', [folder], function(res) {
+            busy.running = false
+            if (!res.png) { page.audioMsg = res.error; return }
+            page.specPng = "file://" + res.png
+            page.specShown = true
+            img.source = page.specPng
+        })
+    }
+    onStatusChanged: if (status === PageStatus.Deactivating) stopAudio()
 
     // live phone GPS — used to geotag THIS measurement on demand
     PositionSource { id: gps; active: true; updateInterval: 3000 }
@@ -109,12 +152,17 @@ Page {
         page.coordsShown = false
         page.mapShown = false
         page.osmWays = []
+        stopAudio()
+        page.audioMsg = ""
+        page.specShown = false
+        page.specPng = ""
         img.source = ""
         busy.running = true
         pyRef.call('backend.render', [folder], function(res) {
             busy.running = false
             page.info = res
-            img.source = "file://" + res.png
+            page.analysisPng = "file://" + res.png
+            img.source = page.analysisPng
         })
     }
     function next() { if (page.index < page.folders.length - 1) page.index++ }
@@ -289,6 +337,38 @@ Page {
                              : (page.coordsShown ? "Koord. an" : "Koord. aus"))
                     color: Theme.secondaryColor
                     font.pixelSize: Theme.fontSizeExtraSmall
+                }
+            }
+
+            Row {  // ultrasonic WAV: listen / spectrogram / playback mode
+                spacing: Theme.paddingMedium
+                visible: page.info.hasWav === true
+                IconButton {
+                    icon.source: page.playing ? "image://theme/icon-m-pause"
+                                              : "image://theme/icon-m-play"
+                    enabled: !page.audioBusy
+                    onClicked: page.togglePlay()
+                }
+                IconButton {
+                    icon.source: "image://theme/icon-m-diagnostic"
+                    icon.color: page.specShown ? Theme.highlightColor : Theme.secondaryColor
+                    onClicked: page.toggleSpec()
+                }
+                Label {  // tap switches the playback mode
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: page.audioBusy ? "Audio wird erzeugt…"
+                          : (page.audioMsg ? page.audioMsg
+                             : (cfgAudioMode.value === 1 ? "Mischer" : "Zeitlupe 1:10"))
+                    color: Theme.secondaryColor
+                    font.pixelSize: Theme.fontSizeExtraSmall
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            page.stopAudio()
+                            page.audioMsg = ""
+                            cfgAudioMode.value = (cfgAudioMode.value === 1) ? 0 : 1
+                        }
+                    }
                 }
             }
 
